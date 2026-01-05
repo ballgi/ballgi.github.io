@@ -58,7 +58,6 @@
             pointer-events: none;
         }
 
-        /* 頂部導航永遠保持在最上層且不被鎖定 */
         .nav-header {
             position: relative;
             z-index: 50;
@@ -95,7 +94,6 @@
     <!-- 遊戲畫面 -->
     <div id="game-screen" class="hidden w-full max-w-md animate__animated animate__fadeIn">
         <div class="flex justify-between items-center mb-3 nav-header">
-            <!-- 回首頁功能獨立，不受 gameState.isProcessing 影響 -->
             <button onclick="returnToHome()" class="bg-gray-500 text-white px-3 py-1.5 rounded-xl font-bold text-xs shadow-md active:scale-95">🏠 回首頁</button>
             <div class="bg-white px-4 py-1.5 rounded-full shadow-md border-2 border-indigo-100">
                 <span class="text-indigo-600 font-black text-sm">第 <span id="current-stage">1</span> / 10 關</span>
@@ -157,7 +155,6 @@
     </div>
 
     <script>
-        // 狀態管理
         const gameState = {
             selectedNumbers: [],
             questions: [],
@@ -166,7 +163,7 @@
             score: 0,
             errors: [],
             collection: JSON.parse(localStorage.getItem('monster_master_col_v8') || '[]'),
-            isProcessing: false, // 用於防連擊
+            isProcessing: false,
             guardianTimer: null
         };
 
@@ -181,7 +178,6 @@
             { id: 8, name: "彩虹馬", type: "妖精", img: "🌈🦄", rarity: "Rare" }
         ];
 
-        // 初始化數字按鈕
         const selector = document.getElementById('number-selector');
         for (let i = 2; i <= 9; i++) {
             const btn = document.createElement('div');
@@ -267,7 +263,7 @@
         }
 
         function updateQuestion() {
-            // 防呆判斷：如果索引超出範圍，直接顯示結果
+            // 安全檢查：若超出範圍則結算
             if(gameState.currentIndex >= 10 || !gameState.questions[gameState.currentIndex]) {
                 showResults();
                 return;
@@ -286,11 +282,10 @@
             document.getElementById('answer-input').innerText = "?";
             document.getElementById('feedback').innerText = "";
             
-            // 視覺上解除 OK 按鈕鎖定
             document.getElementById('ok-btn').classList.remove('btn-locked-ui');
             
             gameState.currentAnswer = "";
-            gameState.isProcessing = false; // 關鍵解鎖
+            gameState.isProcessing = false;
             if (gameState.guardianTimer) clearTimeout(gameState.guardianTimer);
             
             speak(`${q.a} 乘以 ${q.b}`);
@@ -311,17 +306,14 @@
         }
 
         function submitAnswer() {
-            // 防連擊檢查
             if(gameState.isProcessing || gameState.currentAnswer === "") return;
             
-            // 立即鎖定並加上視覺效果
             gameState.isProcessing = true;
             document.getElementById('ok-btn').classList.add('btn-locked-ui');
 
-            // --- 核心防死鎖計時器 ---
+            // 防鎖死計時器
             gameState.guardianTimer = setTimeout(() => {
                 if(gameState.isProcessing) {
-                    console.log("偵測到邏輯卡死，執行守衛機制。");
                     forceNext();
                 }
             }, 1500);
@@ -348,7 +340,6 @@
                 playSound('wrong');
             }
 
-            // 固定延遲後進入下一階段
             setTimeout(() => {
                 forceNext();
             }, 1000);
@@ -356,15 +347,14 @@
 
         function forceNext() {
             if (gameState.guardianTimer) clearTimeout(gameState.guardianTimer);
-            
-            // 移除鎖定狀態，準備切換
             gameState.isProcessing = false;
 
+            // 修正：當 index 為 9 時，代表第 10 關剛結束（0-indexed），應進入結算
             if (gameState.currentIndex < 9) {
                 gameState.currentIndex++;
                 updateQuestion();
             } else {
-                // 如果是最後一關，直接設定進度條並結算
+                // 已完成第 10 關
                 gameState.currentIndex = 10;
                 document.getElementById('progress-fill').style.width = "100%";
                 showResults();
